@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Access</title>
+    <style>
+        .container {
+            text-align: center;
+            padding: 20px;
+        }
+        .camera-link {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 32px;
+            text-decoration: none;
+            font-size: 16px;
+            border-radius: 4px;
+            margin: 10px;
+        }
+        .info-text {
+            margin: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Camera Access</h2>
+        <p class="info-text">Due to security restrictions, the camera must be opened in a new window.</p>
+        <a href="javascript:void(0)" onclick="openCamera()" class="camera-link">Open Camera</a>
+    </div>
+
+    <script>
+        function openCamera() {
+            const cameraWindow = window.open('', 'Camera Access', 'width=800,height=600');
+            cameraWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Camera Access</title>
+                    <style>
+                        body { margin: 0; padding: 20px; text-align: center; }
+                        video { width: 100%; max-width: 640px; margin: 20px auto; border: 2px solid #ccc; }
+                        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Camera Feed</h2>
+                    <video id="video" autoplay playsinline></video>
+                    <br>
+                    <button onclick="stopCamera()">Stop Camera</button>
+
+                    <script>
+                        let stream;
+                        async function startCamera() {
+                            try {
+                                stream = await navigator.mediaDevices.getUserMedia({ 
+                                    video: { width: 1280, height: 720 } 
+                                });
+                                document.getElementById('video').srcObject = stream;
+                            } catch (err) {
+                                alert('Error accessing camera: ' + err.message);
+                            }
+                        }
+
+                        function stopCamera() {
+                            if (stream) {
+                                stream.getTracks().forEach(track => track.stop());
+                            }
+                            window.close();
+                        }
+
+                        startCamera();
+                    </script>
+                </body>
+                </html>
+            `);
+        }
+    </script>
+</body>
+</html>
