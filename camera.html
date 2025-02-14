@@ -4,77 +4,114 @@
     <title>Camera Access</title>
     <style>
         .container {
-            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
+            text-align: center;
         }
-        .camera-link {
-            display: inline-block;
+        #videoElement {
+            width: 100%;
+            max-width: 640px;
+            margin: 20px auto;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+        }
+        .button {
             background-color: #4CAF50;
+            border: none;
             color: white;
             padding: 15px 32px;
+            text-align: center;
             text-decoration: none;
+            display: inline-block;
             font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
             border-radius: 4px;
-            margin: 10px;
         }
-        .info-text {
-            margin: 20px;
-            color: #666;
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Camera Access</h2>
-        <p class="info-text">Due to security restrictions, the camera must be opened in a new window.</p>
-        <a href="javascript:void(0)" onclick="openCamera()" class="camera-link">Open Camera</a>
+        <h1>Camera Access</h1>
+        <div id="status"></div>
+        <video id="videoElement" autoplay playsinline></video>
+        <div>
+            <button id="startButton" class="button">Start Camera</button>
+            <button id="stopButton" class="button" disabled>Stop Camera</button>
+        </div>
     </div>
 
     <script>
-        function openCamera() {
-            const cameraWindow = window.open('', 'Camera Access', 'width=800,height=600');
-            cameraWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Camera Access</title>
-                    <style>
-                        body { margin: 0; padding: 20px; text-align: center; }
-                        video { width: 100%; max-width: 640px; margin: 20px auto; border: 2px solid #ccc; }
-                        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
-                    </style>
-                </head>
-                <body>
-                    <h2>Camera Feed</h2>
-                    <video id="video" autoplay playsinline></video>
-                    <br>
-                    <button onclick="stopCamera()">Stop Camera</button>
+        const videoElement = document.getElementById('videoElement');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusDiv = document.getElementById('status');
+        let stream = null;
 
-                    <script>
-                        let stream;
-                        async function startCamera() {
-                            try {
-                                stream = await navigator.mediaDevices.getUserMedia({ 
-                                    video: { width: 1280, height: 720 } 
-                                });
-                                document.getElementById('video').srcObject = stream;
-                            } catch (err) {
-                                alert('Error accessing camera: ' + err.message);
-                            }
-                        }
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'error' : 'success';
+        }
 
-                        function stopCamera() {
-                            if (stream) {
-                                stream.getTracks().forEach(track => track.stop());
-                            }
-                            window.close();
-                        }
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                videoElement.srcObject = stream;
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                updateStatus('Camera is now active');
+            } catch (err) {
+                if (err.name === 'NotAllowedError') {
+                    updateStatus('Camera access was denied. Please check your browser permissions.', true);
+                } else if (err.name === 'NotFoundError') {
+                    updateStatus('No camera device found. Please connect a camera and try again.', true);
+                } else {
+                    updateStatus(`Error accessing camera: ${err.message}`, true);
+                }
+                console.error('Error:', err);
+            }
+        }
 
-                        startCamera();
-                    </script>
-                </body>
-                </html>
-            `);
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                updateStatus('Camera has been stopped');
+            }
+        }
+
+        startButton.addEventListener('click', startCamera);
+        stopButton.addEventListener('click', stopCamera);
+
+        // Check if getUserMedia is supported
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            updateStatus('Your browser does not support camera access', true);
+            startButton.disabled = true;
         }
     </script>
 </body>
